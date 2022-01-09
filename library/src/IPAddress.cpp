@@ -1,4 +1,6 @@
 #include <IPAddress.hpp>
+#include <sstream>
+#include <string.h>
 
 using namespace vsntwl;
 
@@ -9,7 +11,14 @@ IPAddress4::IPAddress4() {
 	_3 = 1;
 }
 IPAddress4::IPAddress4(const std::string& str) {
-
+	std::istringstream f(str);
+	std::string s;
+	int i = 0;
+	while (getline(f, s, '.')) {
+		if (i == 4)
+			break;
+		ip_a[i++] = atoi(s.c_str());
+	}
 }
 IPAddress4::IPAddress4(unsigned int ip) {
 	this->ip = ip;

@@ -33,6 +33,11 @@ enum ServerStatus {
 	SERVER_STATUS_UP
 };
 
+enum ClientStatus {
+	CLIENT_STATUS_DISCONNECTED,
+	CLIENT_STATUS_CONNECTED
+};
+
 enum ServerStartResult {
 	SERVER_START_SUCCESSFUL = 0,
 	SERVER_ERROR_ON_INIT,

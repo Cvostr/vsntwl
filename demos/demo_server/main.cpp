@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <conio.h>
 #include <vsntwl.hpp>
 #include <Server.hpp>
 
@@ -32,9 +32,24 @@ int main(int argc, char** argv) {
 	}else
 		std::cout << "Server started successfully" << std::endl;
 
-	while (true) {
+	std::cout << "Press S to send 4 bytes to all clients" << std::endl;
 
+	int p = 43212;
+	while (true) {
+		char ch = getch();
+		if (ch == 's') {
+			serv->sendAll((const char*)&p, 4);
+			std::cout << "Sent 4 bytes to all clients" << std::endl;
+		}
+		if (ch == 'k') {
+			std::cout << "Type id of client" << std::endl;
+			int id;
+			std::cin >> id;
+			serv->disconnect(id);
+		}
 	}
+
+	serv->stop();
 
 	return 0;
 }

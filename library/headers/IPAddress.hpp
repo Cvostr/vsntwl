@@ -14,7 +14,7 @@ namespace vsntwl {
 				unsigned char _3;
 			};
 			unsigned int ip;
-			unsigned int ip_a[4];
+			unsigned char ip_a[4];
 		};
 
 		IPAddress4();

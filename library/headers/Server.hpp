@@ -26,7 +26,7 @@ namespace vsntwl {
 	};
 
 	typedef std::function<void(ConnectedClient*, unsigned int)> client_conn_function;
-	typedef std::function<void(ConnectedClient*, unsigned int, char*, unsigned int)> client_receive_function;
+	typedef std::function<void(ConnectedClient*, unsigned int, char*, unsigned int)> server_receive_function;
 
 	class Server {
 	private:
@@ -46,7 +46,7 @@ namespace vsntwl {
 		char* buffer;
 
 		client_conn_function client_connect_handler;
-		client_receive_function client_receive_handler;
+		server_receive_function client_receive_handler;
 		client_conn_function client_disconnect_handler;
 
 		void accept_threaded_loop();
@@ -64,11 +64,17 @@ namespace vsntwl {
 
 		ServerStatus getStatus() const;
 
+		const std::map<unsigned int, ConnectedClient*>& getClients() const;
+
 		ServerStartResult start();
 		void stop();
 
+		void disconnect(unsigned int id);
+
 		void setClientConnectedHandler(client_conn_function const& handler);
-		void setClientDataReceiveHandler(client_receive_function const& handler);
+		void setClientDataReceiveHandler(server_receive_function const& handler);
 		void setClientDisconnectedHandler(client_conn_function const& handler);
+
+		void sendAll(const char* data, unsigned int size);
 	};
 }
