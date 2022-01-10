@@ -9,6 +9,7 @@
 namespace vsntwl {
 
 	typedef std::function<void(char*, unsigned int)> client_receive_function;
+	typedef std::function<void()> client_disconnect_function;
 
 	class Client {
 	private:
@@ -22,6 +23,7 @@ namespace vsntwl {
 
 		std::thread client_thread;
 		client_receive_function receive_handler;
+		client_disconnect_function disconnect_handler;
 
 		char* buffer;
 
@@ -31,15 +33,18 @@ namespace vsntwl {
 		~Client();
 
 		void setInetProtocol(InetProtocol protocol);
+		//get inet protocol, that set to this client
 		InetProtocol getInetProtocol() const;
-
+		//get current client status
 		ClientStatus getStatus() const;
-
+		//connect to server
 		ClientConnectResult Connect(IPAddress4 address, unsigned short port);
+		//disconnect from server
 		void disconnect();
-
+		//Send data to server
 		bool sendData(const char* data, unsigned int size);
 
 		void setDataReceivedHandler(client_receive_function const& handler);
+		void setDisconnectHandler(client_disconnect_function const& handler);
 	};
 }

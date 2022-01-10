@@ -32,6 +32,7 @@ namespace vsntwl {
 	private:
 		unsigned short port;
 		InetProtocol inet_protocol;
+		unsigned int max_connections;
 
 		ServerStatus status;
 
@@ -55,26 +56,34 @@ namespace vsntwl {
 
 		Server();
 		~Server();
-
+		//set server port
 		void setPort(unsigned short port);
+		//get server port
 		unsigned short getPort() const;
 
+		void setMaxConnections(unsigned int max_connections);
+
+		unsigned int getMaxConnections() const;
+		//set internet protocol for this server (TCP, UDP)
 		void setInetProtocol(InetProtocol protocol);
 		InetProtocol getInetProtocol() const;
-
+		//get current server status
 		ServerStatus getStatus() const;
-
+		//get all connected clients
 		const std::map<unsigned int, ConnectedClient*>& getClients() const;
-
+		//try to start server
 		ServerStartResult start();
+		//disconnect all clients and stop server
 		void stop();
-
+		//disconnect client by its id
 		void disconnect(unsigned int id);
 
 		void setClientConnectedHandler(client_conn_function const& handler);
 		void setClientDataReceiveHandler(server_receive_function const& handler);
 		void setClientDisconnectedHandler(client_conn_function const& handler);
-
+		//send data to all connected clients
 		void sendAll(const char* data, unsigned int size);
+		//send data to specified client
+		void sendClient(unsigned int client_id, const char* data, unsigned int size);
 	};
 }

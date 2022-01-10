@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
 	init();
 
 	Server* serv = new Server;
-
+	//serv->setMaxConnections(2);
 	serv->setClientConnectedHandler([](ConnectedClient* client, unsigned int id) {
 		std::cout << "Connected client " << id << std::endl;
 	});
@@ -33,6 +33,7 @@ int main(int argc, char** argv) {
 		std::cout << "Server started successfully" << std::endl;
 
 	std::cout << "Press S to send 4 bytes to all clients" << std::endl;
+	std::cout << "Press K to disconnect client by its id" << std::endl;
 
 	int p = 43212;
 	while (true) {
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
 			int id;
 			std::cin >> id;
 			serv->disconnect(id);
+			std::cout << "Disconnected" << std::endl;
 		}
 	}
 

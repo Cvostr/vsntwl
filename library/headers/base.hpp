@@ -51,3 +51,5 @@ enum ClientConnectResult {
 };
 
 int ConvertProtocol(InetProtocol protocol);
+unsigned int get_random_value();
+unsigned int get_random_value(unsigned int min, unsigned int max);

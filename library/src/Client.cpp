@@ -1,5 +1,6 @@
 #include <Client.hpp>
 #include <iostream>
+#include <chrono>
 
 using namespace vsntwl;
 
@@ -27,6 +28,9 @@ ClientStatus Client::getStatus() const {
 void Client::setDataReceivedHandler(client_receive_function const& handler) {
 	receive_handler = handler;
 }
+void Client::setDisconnectHandler(client_disconnect_function const& handler) {
+	disconnect_handler = handler;
+}
 ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 	if (status == CLIENT_STATUS_DISCONNECTED) {
 		//Creating socket
@@ -49,10 +53,12 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 
 		u_long iMode = 1;
 		ioctlsocket(client_socket, FIONBIO, &iMode);
-
-		client_thread = std::thread([this] {client_threaded_loop(); });
-
+		//set client status to connected
 		status = CLIENT_STATUS_CONNECTED;
+		//start client thread
+		if (client_thread.joinable())
+			client_thread.join();
+		client_thread = std::thread([this] {client_threaded_loop(); });
 	}
 
 	return CLIENT_CONNECTED;
@@ -61,7 +67,6 @@ void Client::disconnect() {
 	if (status == CLIENT_STATUS_CONNECTED) {
 		closesocket(client_socket);
 		status = CLIENT_STATUS_DISCONNECTED;
-		client_thread.join();
 	}
 }
 
@@ -76,14 +81,26 @@ void Client::client_threaded_loop() {
 	while (status == CLIENT_STATUS_CONNECTED) {
 		int size = recv(client_socket, buffer, DEFAULT_BUFLEN, 0);
 		if (size == 0) {
-			//disconnected
-			std::cout << "server disconnected me";
-			status = CLIENT_STATUS_DISCONNECTED;
+			//disconnected by server manually
+			if (disconnect_handler != nullptr)
+				disconnect_handler();
+			disconnect();
 		}
 		else if (size > 0) {
 			//data received
-			receive_handler(buffer, size);
+			if (receive_handler != nullptr)
+				receive_handler(buffer, size);
 		}
-
+		else if (size < 0) {
+			int error = WSAGetLastError();
+			if (error == WSAECONNRESET) {
+				//disconnected from server (server closed forcibly)
+				if(disconnect_handler != nullptr)
+					disconnect_handler();
+				disconnect();
+			}
+		}
+		//sleep some time
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }

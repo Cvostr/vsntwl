@@ -29,6 +29,10 @@ int main(int argc, char** argv) {
 		std::cout << std::endl;
 	});
 
+	cl->setDisconnectHandler([]() {
+		std::cout << "Server disconnected client" << std::endl;
+	});
+
 	connect(cl, IPAddress4());
 
 	std::cout << "Press C to connect" << std::endl;
