@@ -1,5 +1,6 @@
 #include <Server.hpp>
 #include <chrono>
+#include <vector>
 
 using namespace vsntwl;
 
@@ -50,10 +51,16 @@ void Server::setClientDataReceiveHandler(server_receive_function const& handler)
 void Server::setClientDisconnectedHandler(client_conn_function const& handler) {
 	this->client_disconnect_handler = handler;
 }
+void Server::disable_tcp_blocking() {
+	if (inet_protocol == INET_PROTOCOL_TCP) {
+		u_long iMode = 1;
+		ioctlsocket(server_socket, FIONBIO, &iMode);
+	}
+}
 ServerStartResult Server::start() {
 	if (status == SERVER_STATUS_DOWN) {
 		status = SERVER_STATUS_STARTING;
-		SOCKADDR_IN address;
+		sockaddr_in address;
 		address.sin_addr.S_un.S_addr = INADDR_ANY; //Any IP address
 		address.sin_port = htons(port); //Setting port
 		address.sin_family = AF_INET; //IPv4 addresses
@@ -63,17 +70,20 @@ ServerStartResult Server::start() {
 		if (server_socket == INVALID_SOCKET)
 			return SERVER_ERROR_ON_INIT;
 		//disable blocking
-		u_long iMode = 1;
-		ioctlsocket(server_socket, FIONBIO, &iMode);
+		disable_tcp_blocking();
 
 		if (bind(server_socket, (struct sockaddr*)&address, sizeof(address)) == SOCKET_ERROR)
 			return SERVER_ERROR_ON_BIND;
-		if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR)
-			return SERVER_ERROR_ON_LISTEN;
+		
+		if (inet_protocol != INET_PROTOCOL_UDP) {
+			if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR)
+				return SERVER_ERROR_ON_LISTEN;
+		}
 		//update status
 		status = SERVER_STATUS_UP;
 		//start server loop
-		accept_thread = std::thread([this] {accept_threaded_loop(); });
+		if (inet_protocol == INET_PROTOCOL_TCP) 
+			accept_thread = std::thread([this] {accept_threaded_loop(); });
 		data_thread = std::thread([this] {data_threaded_loop(); });
 	}
 	//return successful
@@ -120,13 +130,20 @@ void Server::sendAll(const char* data, unsigned int size) {
 
 void Server::sendClient(unsigned int client_id, const char* data, unsigned int size) {
 	client_mutex.lock();
-
+	
 	auto it = clients.find(client_id);
 	if (it != clients.end()) {
 		int result = send(clients.at(client_id)->GetSocket(), data, size, 0);
 	}
 
 	client_mutex.unlock();
+}
+
+void Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned int size) {
+	auto it = clients.find(client_id);
+	if (it != clients.end()) {
+		int result = send(clients.at(client_id)->GetSocket(), data, size, 0);
+	}
 }
 
 void Server::accept_threaded_loop() {
@@ -166,6 +183,7 @@ void Server::accept_threaded_loop() {
 }
 
 void Server::data_threaded_loop() {
+	std::vector<int> ids_to_remove;
 	while (status == SERVER_STATUS_UP) {
 		client_mutex.lock();
 		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
@@ -176,13 +194,9 @@ void Server::data_threaded_loop() {
 				//call disconnect handler
 				if(client_disconnect_handler != nullptr)
 					client_disconnect_handler(client_pair.second, client_pair.first);
-				//close socket
-				closesocket(client_pair.second->GetSocket());
-				//free class object
-				delete client_pair.second;
-				//remove from map
-				clients.erase(it);
-				break;
+				//add client's id to delete list
+				ids_to_remove.push_back(client_pair.first);
+				//break;
 			}
 			if (size > 0) {
 				//some data received from client
@@ -192,20 +206,31 @@ void Server::data_threaded_loop() {
 			if (size < 0) {
 				int error = WSAGetLastError();
 				if (error == WSAECONNRESET) {
-					//client disconnected
+					//client disconnected forcibly
 					//call disconnect handler
 					if (client_disconnect_handler != nullptr)
 						client_disconnect_handler(client_pair.second, client_pair.first);
-					//close socket
-					closesocket(client_pair.second->GetSocket());
-					//free class object
-					delete client_pair.second;
-					//remove from map
-					clients.erase(it);
-					break;
+					//add client's id to delete list
+					ids_to_remove.push_back(client_pair.first);
 				}
 			}
 		}
+
+		for (auto& to_remove : ids_to_remove) {
+			auto& it = clients.find(to_remove);
+			//check iterator
+			if (it != clients.end()) {
+				auto& client_pair = *it;
+				//close socket
+				closesocket(client_pair.second->GetSocket());
+				//free class object
+				delete client_pair.second;
+				//remove from map
+				clients.erase(it);
+			}
+		}
+		ids_to_remove.clear();
+
 		client_mutex.unlock();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));

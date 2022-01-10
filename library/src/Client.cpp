@@ -19,18 +19,23 @@ Client::~Client() {
 void Client::setInetProtocol(InetProtocol protocol) {
 	inet_protocol = protocol;
 }
+
 InetProtocol Client::getInetProtocol() const {
 	return inet_protocol;
 }
+
 ClientStatus Client::getStatus() const {
 	return status;
 }
+
 void Client::setDataReceivedHandler(client_receive_function const& handler) {
 	receive_handler = handler;
 }
+
 void Client::setDisconnectHandler(client_disconnect_function const& handler) {
 	disconnect_handler = handler;
 }
+
 ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 	if (status == CLIENT_STATUS_DISCONNECTED) {
 		//Creating socket
@@ -45,14 +50,17 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 		as_addr.sin_family = AF_INET;
 		as_addr.sin_addr.S_un.S_addr = address.ip;
 		as_addr.sin_port = htons(port);
-		//connecting socket
-		if (SOCKET_ERROR == (connect(client_socket, (sockaddr*)&as_addr, sizeof(as_addr))))
-		{
-			return CLIENT_CONNECTION_FAILED;
+		//connecting to server, no need to do this on UDP
+		if (inet_protocol == INET_PROTOCOL_TCP) {
+			//connecting socket
+			if (SOCKET_ERROR == (connect(client_socket, (sockaddr*)&as_addr, sizeof(as_addr))))
+			{
+				return CLIENT_CONNECTION_FAILED;
+			}
+			//disable blocking
+			u_long iMode = 1;
+			ioctlsocket(client_socket, FIONBIO, &iMode);
 		}
-
-		u_long iMode = 1;
-		ioctlsocket(client_socket, FIONBIO, &iMode);
 		//set client status to connected
 		status = CLIENT_STATUS_CONNECTED;
 		//start client thread

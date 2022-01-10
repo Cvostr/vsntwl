@@ -21,6 +21,8 @@ int main(int argc, char** argv) {
 
 	Client* cl = new Client;
 
+	//cl->setInetProtocol(INET_PROTOCOL_UDP);
+
 	cl->setDataReceivedHandler([](char* data, unsigned int size) {
 		std::cout << "Received " << size << " bytes from server " << std::endl;
 		for (unsigned int i = 0; i < size; i++) {

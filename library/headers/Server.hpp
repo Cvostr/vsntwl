@@ -50,6 +50,7 @@ namespace vsntwl {
 		server_receive_function client_receive_handler;
 		client_conn_function client_disconnect_handler;
 
+		void disable_tcp_blocking();
 		void accept_threaded_loop();
 		void data_threaded_loop();
 	public:
@@ -60,9 +61,9 @@ namespace vsntwl {
 		void setPort(unsigned short port);
 		//get server port
 		unsigned short getPort() const;
-
+		//set max client connections count
 		void setMaxConnections(unsigned int max_connections);
-
+		//get max clients connections
 		unsigned int getMaxConnections() const;
 		//set internet protocol for this server (TCP, UDP)
 		void setInetProtocol(InetProtocol protocol);
@@ -83,7 +84,9 @@ namespace vsntwl {
 		void setClientDisconnectedHandler(client_conn_function const& handler);
 		//send data to all connected clients
 		void sendAll(const char* data, unsigned int size);
-		//send data to specified client
+		//send data to specified client, locking mutex
 		void sendClient(unsigned int client_id, const char* data, unsigned int size);
+		//send data to specified client, don't lock mutex
+		void sendClientNoLock(unsigned int client_id, const char* data, unsigned int size);
 	};
 }

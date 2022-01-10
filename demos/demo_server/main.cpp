@@ -9,17 +9,22 @@ int main(int argc, char** argv) {
 	init();
 
 	Server* serv = new Server;
+	//serv->setInetProtocol(INET_PROTOCOL_UDP);
 	//serv->setMaxConnections(2);
 	serv->setClientConnectedHandler([](ConnectedClient* client, unsigned int id) {
 		std::cout << "Connected client " << id << std::endl;
 	});
 
-	serv->setClientDataReceiveHandler([](ConnectedClient* client, unsigned int id, char* data, unsigned int size) {
+	serv->setClientDataReceiveHandler([serv](ConnectedClient* client, unsigned int id, char* data, unsigned int size) {
 		std::cout << "Received " << size << " bytes from client " << id << std::endl;
 		for (unsigned int i = 0; i < size; i++) {
 			std::cout << data[i];
 		}
 		std::cout << std::endl;
+
+		char* answ = "answer to client";
+
+		serv->sendClientNoLock(id, answ, 16);
 	});
 
 	serv->setClientDisconnectedHandler([](ConnectedClient* client, unsigned int id) {
@@ -28,7 +33,7 @@ int main(int argc, char** argv) {
 
 	ServerStartResult result = serv->start();
 	if (result > 0) {
-		std::cout << "Error server opening " << result << std::endl;
+		std::cout << "Error server opening " << result << " " << WSAGetLastError() << std::endl;
 	}else
 		std::cout << "Server started successfully" << std::endl;
 
@@ -47,7 +52,6 @@ int main(int argc, char** argv) {
 			int id;
 			std::cin >> id;
 			serv->disconnect(id);
-			std::cout << "Disconnected" << std::endl;
 		}
 	}
 
