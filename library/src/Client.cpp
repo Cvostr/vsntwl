@@ -35,7 +35,10 @@ void Client::setDataReceivedHandler(client_receive_function const& handler) {
 void Client::setDisconnectHandler(client_disconnect_function const& handler) {
 	disconnect_handler = handler;
 }
-
+void Client::disable_tcp_blocking() {
+	u_long iMode = 1;
+	ioctlsocket(client_socket, FIONBIO, &iMode);
+}
 ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 	if (status == CLIENT_STATUS_DISCONNECTED) {
 		//Creating socket
@@ -58,8 +61,7 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 				return CLIENT_CONNECTION_FAILED;
 			}
 			//disable blocking
-			u_long iMode = 1;
-			ioctlsocket(client_socket, FIONBIO, &iMode);
+			disable_tcp_blocking();
 		}
 		//set client status to connected
 		status = CLIENT_STATUS_CONNECTED;
@@ -87,28 +89,45 @@ bool Client::sendData(const char* data, unsigned int size) {
 
 void Client::client_threaded_loop() {
 	while (status == CLIENT_STATUS_CONNECTED) {
-		int size = recv(client_socket, buffer, DEFAULT_BUFLEN, 0);
-		if (size == 0) {
-			//disconnected by server manually
+		if (inet_protocol == INET_PROTOCOL_TCP)
+			client_tcp_function();
+		else if (inet_protocol == INET_PROTOCOL_UDP)
+			client_udp_function();
+		//sleep some time
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+}
+
+void Client::client_tcp_function() {
+	int size = recv(client_socket, buffer, DEFAULT_BUFLEN, 0);
+	if (size == 0) {
+		//disconnected by server manually
+		if (disconnect_handler != nullptr)
+			disconnect_handler();
+		disconnect();
+	}
+	else if (size > 0) {
+		//data received
+		if (receive_handler != nullptr)
+			receive_handler(buffer, size);
+	}
+	else if (size < 0) {
+		int error = WSAGetLastError();
+		if (error == WSAECONNRESET) {
+			//disconnected from server (server closed forcibly)
 			if (disconnect_handler != nullptr)
 				disconnect_handler();
 			disconnect();
 		}
-		else if (size > 0) {
-			//data received
-			if (receive_handler != nullptr)
-				receive_handler(buffer, size);
-		}
-		else if (size < 0) {
-			int error = WSAGetLastError();
-			if (error == WSAECONNRESET) {
-				//disconnected from server (server closed forcibly)
-				if(disconnect_handler != nullptr)
-					disconnect_handler();
-				disconnect();
-			}
-		}
-		//sleep some time
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+}
+
+void Client::client_udp_function() {
+	sockaddr from;
+	int from_len = 0;
+	int size = recvfrom(client_socket, buffer, DEFAULT_BUFLEN, 0, &from, &from_len);
+	if (size > 0) {
+		if (receive_handler != nullptr)
+			receive_handler(buffer, size);
 	}
 }

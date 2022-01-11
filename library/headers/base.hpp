@@ -50,6 +50,11 @@ enum ClientConnectResult {
 	CLIENT_CONNECTION_FAILED
 };
 
+enum DisconnectionType {
+	DISCONNECTION_TYPE_MANUAL,
+	DISCONNECTION_TYPE_FORCIBLY
+};
+
 int ConvertProtocol(InetProtocol protocol);
 unsigned int get_random_value();
 unsigned int get_random_value(unsigned int min, unsigned int max);

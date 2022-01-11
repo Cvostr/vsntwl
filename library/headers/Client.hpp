@@ -28,10 +28,15 @@ namespace vsntwl {
 		char* buffer;
 
 		void client_threaded_loop();
+
+		void disable_tcp_blocking();
+
+		void client_tcp_function();
+		void client_udp_function();
 	public:
 		Client();
 		~Client();
-
+		//set internet protocol for this client (TCP, UDP)
 		void setInetProtocol(InetProtocol protocol);
 		//get inet protocol, that set to this client
 		InetProtocol getInetProtocol() const;

@@ -122,7 +122,7 @@ void Server::sendAll(const char* data, unsigned int size) {
 
 	for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
 		auto& client_pair = *it;
-		int result = send(client_pair.second->GetSocket(), data, size, 0);
+		sendClientNoLock(client_pair.first, data, size);
 	}
 
 	client_mutex.unlock();
@@ -131,19 +131,20 @@ void Server::sendAll(const char* data, unsigned int size) {
 void Server::sendClient(unsigned int client_id, const char* data, unsigned int size) {
 	client_mutex.lock();
 	
-	auto it = clients.find(client_id);
-	if (it != clients.end()) {
-		int result = send(clients.at(client_id)->GetSocket(), data, size, 0);
-	}
+	sendClientNoLock(client_id, data, size);
 
 	client_mutex.unlock();
 }
 
-void Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned int size) {
+int Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned int size) {
 	auto it = clients.find(client_id);
+	int result = 0;
 	if (it != clients.end()) {
-		int result = send(clients.at(client_id)->GetSocket(), data, size, 0);
+		if(inet_protocol == INET_PROTOCOL_TCP)
+			result = send(clients.at(client_id)->GetSocket(), data, size, 0);
 	}
+
+	return result;
 }
 
 void Server::accept_threaded_loop() {

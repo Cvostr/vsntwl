@@ -27,6 +27,7 @@ namespace vsntwl {
 
 	typedef std::function<void(ConnectedClient*, unsigned int)> client_conn_function;
 	typedef std::function<void(ConnectedClient*, unsigned int, char*, unsigned int)> server_receive_function;
+	typedef std::function<void(IPAddress4&, unsigned short, char*, unsigned int)> server_udp_receive_function;
 
 	class Server {
 	private:
@@ -67,6 +68,7 @@ namespace vsntwl {
 		unsigned int getMaxConnections() const;
 		//set internet protocol for this server (TCP, UDP)
 		void setInetProtocol(InetProtocol protocol);
+		//get inet protocol, that set to this server
 		InetProtocol getInetProtocol() const;
 		//get current server status
 		ServerStatus getStatus() const;
@@ -87,6 +89,6 @@ namespace vsntwl {
 		//send data to specified client, locking mutex
 		void sendClient(unsigned int client_id, const char* data, unsigned int size);
 		//send data to specified client, don't lock mutex
-		void sendClientNoLock(unsigned int client_id, const char* data, unsigned int size);
+		int sendClientNoLock(unsigned int client_id, const char* data, unsigned int size);
 	};
 }
