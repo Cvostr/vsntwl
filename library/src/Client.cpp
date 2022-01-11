@@ -1,6 +1,7 @@
 #include <Client.hpp>
 #include <iostream>
 #include <chrono>
+#include <Socket.hpp>
 
 using namespace vsntwl;
 
@@ -36,8 +37,7 @@ void Client::setDisconnectHandler(client_disconnect_function const& handler) {
 	disconnect_handler = handler;
 }
 void Client::disable_tcp_blocking() {
-	u_long iMode = 1;
-	ioctlsocket(client_socket, FIONBIO, &iMode);
+	DisableBlocking(client_socket);
 }
 ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 	if (status == CLIENT_STATUS_DISCONNECTED) {
@@ -49,10 +49,7 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 		}
 		//Filling struct
 		sockaddr_in as_addr;
-		ZeroMemory(&as_addr, sizeof(as_addr));
-		as_addr.sin_family = AF_INET;
-		as_addr.sin_addr.S_un.S_addr = address.ip;
-		as_addr.sin_port = htons(port);
+		FillInaddrStruct(address, port, as_addr);
 		//connecting to server, no need to do this on UDP
 		if (inet_protocol == INET_PROTOCOL_TCP) {
 			//connecting socket
@@ -75,7 +72,7 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 }
 void Client::disconnect() {
 	if (status == CLIENT_STATUS_CONNECTED) {
-		closesocket(client_socket);
+		CloseSocket(client_socket);
 		status = CLIENT_STATUS_DISCONNECTED;
 	}
 }
@@ -112,7 +109,7 @@ void Client::client_tcp_function() {
 			receive_handler(buffer, size);
 	}
 	else if (size < 0) {
-		int error = WSAGetLastError();
+		int error = GetLastSockErrCode();
 		if (error == WSAECONNRESET) {
 			//disconnected from server (server closed forcibly)
 			if (disconnect_handler != nullptr)
@@ -125,9 +122,9 @@ void Client::client_tcp_function() {
 void Client::client_udp_function() {
 	sockaddr from;
 	int from_len = 0;
-	int size = recvfrom(client_socket, buffer, DEFAULT_BUFLEN, 0, &from, &from_len);
-	if (size > 0) {
-		if (receive_handler != nullptr)
-			receive_handler(buffer, size);
-	}
+	//int size = recvfrom(client_socket, buffer, DEFAULT_BUFLEN, 0, &from, &from_len);
+	//if (size > 0) {
+	//	if (receive_handler != nullptr)
+	//		receive_handler(buffer, size);
+	//}
 }

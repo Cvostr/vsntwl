@@ -6,7 +6,6 @@ static unsigned int rand_seed = time(0);
 
 int ConvertProtocol(InetProtocol protocol) {
 	int result = 0;
-#ifdef _WIN32
 	switch (protocol) {
 	case INET_PROTOCOL_TCP:
 		result = SOCK_STREAM;
@@ -15,7 +14,6 @@ int ConvertProtocol(InetProtocol protocol) {
 		result = SOCK_DGRAM;
 		break;
 	}
-#endif
 	return result;
 }
 

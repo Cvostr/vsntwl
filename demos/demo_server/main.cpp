@@ -1,7 +1,16 @@
 #include <iostream>
-#include <conio.h>
 #include <vsntwl.hpp>
 #include <Server.hpp>
+#include <Socket.hpp>
+#include <stdio.h>
+
+#ifdef _WIN32
+#include <conio.h>
+#endif
+
+#ifdef __linux__
+#define getch getchar
+#endif
 
 using namespace vsntwl;
 
@@ -33,12 +42,13 @@ int main(int argc, char** argv) {
 
 	ServerStartResult result = serv->start();
 	if (result > 0) {
-		std::cout << "Error server opening " << result << " " << WSAGetLastError() << std::endl;
+		std::cout << "Error server opening " << result << " " << GetLastSockErrCode() << std::endl;
 	}else
 		std::cout << "Server started successfully" << std::endl;
 
 	std::cout << "Press S to send 4 bytes to all clients" << std::endl;
 	std::cout << "Press K to disconnect client by its id" << std::endl;
+	std::cout << "Press D to stop server" << std::endl;
 
 	int p = 43212;
 	while (true) {
@@ -52,6 +62,10 @@ int main(int argc, char** argv) {
 			int id;
 			std::cin >> id;
 			serv->disconnect(id);
+		}
+		if (ch == 'd') {
+			serv->stop();
+			std::cout << "Server stopped" << std::endl;
 		}
 	}
 

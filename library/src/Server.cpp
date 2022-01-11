@@ -1,6 +1,7 @@
 #include <Server.hpp>
 #include <chrono>
 #include <vector>
+#include <Socket.hpp>
 
 using namespace vsntwl;
 
@@ -53,17 +54,15 @@ void Server::setClientDisconnectedHandler(client_conn_function const& handler) {
 }
 void Server::disable_tcp_blocking() {
 	if (inet_protocol == INET_PROTOCOL_TCP) {
-		u_long iMode = 1;
-		ioctlsocket(server_socket, FIONBIO, &iMode);
+		DisableBlocking(server_socket);
 	}
 }
+
 ServerStartResult Server::start() {
 	if (status == SERVER_STATUS_DOWN) {
 		status = SERVER_STATUS_STARTING;
 		sockaddr_in address;
-		address.sin_addr.S_un.S_addr = INADDR_ANY; //Any IP address
-		address.sin_port = htons(port); //Setting port
-		address.sin_family = AF_INET; //IPv4 addresses
+		FillInaddrStruct(port, address);
 
 		//try to create socket
 		server_socket = socket(AF_INET, ConvertProtocol(inet_protocol), 0);
@@ -72,12 +71,16 @@ ServerStartResult Server::start() {
 		//disable blocking
 		disable_tcp_blocking();
 
-		if (bind(server_socket, (struct sockaddr*)&address, sizeof(address)) == SOCKET_ERROR)
+		if (bind(server_socket, (struct sockaddr*)&address, sizeof(address)) == SOCKET_ERROR){
+			CloseSocket(server_socket);
 			return SERVER_ERROR_ON_BIND;
+		}
 		
 		if (inet_protocol != INET_PROTOCOL_UDP) {
-			if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR)
+			if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR){
+				CloseSocket(server_socket);
 				return SERVER_ERROR_ON_LISTEN;
+			}
 		}
 		//update status
 		status = SERVER_STATUS_UP;
@@ -92,7 +95,7 @@ ServerStartResult Server::start() {
 void Server::stop() {
 	if (status == SERVER_STATUS_UP) {
 		//close socket forcefully
-		closesocket(server_socket);
+		CloseSocket(server_socket);
 		status = SERVER_STATUS_DOWN;
 		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
 			auto& client_pair = *it;
@@ -110,7 +113,7 @@ void Server::disconnect(unsigned int id) {
 	if (it != clients.end()) {
 		ConnectedClient* client = clients.at(id);
 		client_disconnect_handler(client, id);
-		closesocket(client->GetSocket());
+		CloseSocket(client->GetSocket());
 		delete clients.at(id);
 		clients.erase(id);
 	}
@@ -149,8 +152,8 @@ int Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned 
 
 void Server::accept_threaded_loop() {
 	while (status == SERVER_STATUS_UP) {
-		SOCKADDR_IN client_address;
-		int addrlen = sizeof(SOCKADDR_IN);
+		sockaddr_in client_address;
+		unsigned int addrlen = sizeof(sockaddr_in);
 
 		client_mutex.lock();
 		unsigned int connected_count = clients.size();
@@ -161,12 +164,12 @@ void Server::accept_threaded_loop() {
 		if (client_socket != INVALID_SOCKET) {
 			//check connected clients count
 			if (max_connections > 0 && connected_count == max_connections) {
-				closesocket(client_socket);
+				CloseSocket(client_socket);
 				break;
 			}
 			//new client connected to server
 			ConnectedClient* client = new ConnectedClient(client_socket, 
-				IPAddress4(client_address.sin_addr.S_un.S_addr));
+				IPAddress4(GetAddressInteger(client_address)));
 
 			client_mutex.lock();
 			unsigned int id = get_random_value(0, 100000);
@@ -184,7 +187,7 @@ void Server::accept_threaded_loop() {
 }
 
 void Server::data_threaded_loop() {
-	std::vector<int> ids_to_remove;
+	std::vector<unsigned int> ids_to_remove;
 	while (status == SERVER_STATUS_UP) {
 		client_mutex.lock();
 		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
@@ -205,7 +208,7 @@ void Server::data_threaded_loop() {
 					client_receive_handler(client_pair.second, client_pair.first, buffer, size);
 			}
 			if (size < 0) {
-				int error = WSAGetLastError();
+				int error = GetLastSockErrCode();
 				if (error == WSAECONNRESET) {
 					//client disconnected forcibly
 					//call disconnect handler
@@ -217,13 +220,13 @@ void Server::data_threaded_loop() {
 			}
 		}
 
-		for (auto& to_remove : ids_to_remove) {
-			auto& it = clients.find(to_remove);
+		for (const auto& to_remove : ids_to_remove) {
+			auto it = clients.find(to_remove);
 			//check iterator
 			if (it != clients.end()) {
 				auto& client_pair = *it;
 				//close socket
-				closesocket(client_pair.second->GetSocket());
+				CloseSocket(client_pair.second->GetSocket());
 				//free class object
 				delete client_pair.second;
 				//remove from map

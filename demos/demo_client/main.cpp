@@ -1,7 +1,16 @@
 #include <iostream>
-#include <conio.h>
 #include <vsntwl.hpp>
 #include <Client.hpp>
+#include <stdio.h>
+
+#ifdef _WIN32
+#include <conio.h>
+#endif
+
+#ifdef __linux__
+#define getch getchar
+#endif
+
 
 using namespace vsntwl;
 

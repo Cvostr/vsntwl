@@ -18,6 +18,10 @@
 
 #ifdef __linux__
 typedef int SOCKET;
+#define INVALID_SOCKET -1
+#define SOCKET_ERROR -1
+
+#define WSAECONNRESET 104
 #endif
 
 #define DEFAULT_BUFLEN 1500
