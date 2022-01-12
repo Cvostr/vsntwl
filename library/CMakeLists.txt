@@ -4,13 +4,17 @@ project ("vsntwl")
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(SRC_FILES 	src/Socket.cpp
+set(SRC_FILES 	
+				src/ConnectedClient.cpp
+				src/Socket.cpp
 				src/Server.cpp
 				src/Client.cpp
 				src/base.cpp
 				src/vsntwl.cpp
 				src/IPAddress.cpp)
-set(HEADER 	headers/Socket.hpp
+set(HEADER 	
+			headers/ConnectedClient.hpp
+			headers/Socket.hpp
 			headers/Server.hpp
 			headers/Client.hpp
 			headers/base.hpp

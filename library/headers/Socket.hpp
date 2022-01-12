@@ -14,5 +14,5 @@ namespace vsntwl {
 	SOCKET AcceptSocket(SOCKET socket, sockaddr_in& in);
 	//UDP
 	int RecvFrom(SOCKET socket, char* buffer, unsigned int size, sockaddr_in& sender);
-	int SendTo(SOCKET socket, const char* buffer, unsigned int size, const sockaddr_in& receiver);
+	int SendTo(SOCKET socket, const char* buffer, unsigned int size, const sockaddr_in& dest);
 }

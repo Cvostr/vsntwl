@@ -87,7 +87,10 @@ ServerStartResult Server::start() {
 		//start server loop
 		if (inet_protocol == INET_PROTOCOL_TCP) 
 			accept_thread = std::thread([this] {accept_threaded_loop(); });
-		data_thread = std::thread([this] {data_threaded_loop(); });
+		if (inet_protocol == INET_PROTOCOL_TCP)
+			data_thread = std::thread([this] {data_threaded_loop(); });
+		else
+			data_thread = std::thread([this] {data_threaded_udp_loop(); });
 	}
 	//return successful
 	return SERVER_START_SUCCESSFUL;
@@ -101,7 +104,9 @@ void Server::stop() {
 		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
 			auto& client_pair = *it;
 			//disconnect client
-			CloseSocket(client_pair.second->GetSocket());
+			SOCKET sock = client_pair.second->getSocket();
+			if(sock != INVALID_SOCKET)
+				CloseSocket(sock);
 			//free class object
 			delete client_pair.second;
 		}
@@ -118,7 +123,9 @@ void Server::disconnect(unsigned int id) {
 		ConnectedClient* client = clients.at(id);
 		client_disconnect_handler(client, id);
 		
-		CloseSocket(client->GetSocket());
+		SOCKET socket = client->getSocket();
+		if(socket != INVALID_SOCKET)
+			CloseSocket(socket);
 
 		delete clients.at(id);
 		clients.erase(id);
@@ -150,7 +157,14 @@ int Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned 
 	int result = 0;
 	if (it != clients.end()) {
 		if(inet_protocol == INET_PROTOCOL_TCP)
-			result = send(clients.at(client_id)->GetSocket(), data, size, 0);
+			result = send(clients.at(client_id)->getSocket(), data, size, 0);
+		else if (inet_protocol == INET_PROTOCOL_UDP) {
+			auto& pair = *it;
+			sockaddr_in dest;
+			FillInaddrStruct(pair.second->getIP(), pair.second->getPort(), dest);
+			dest.sin_port = pair.second->getPort();
+			SendTo(server_socket, data, size, dest);
+		}
 	}
 
 	return result;
@@ -174,7 +188,7 @@ void Server::accept_threaded_loop() {
 			}
 			//new client connected to server
 			ConnectedClient* client = new ConnectedClient(client_socket, 
-				IPAddress4(GetAddressInteger(client_address)));
+				IPAddress4(GetAddressInteger(client_address)), client_address.sin_port);
 
 			client_mutex.lock();
 			unsigned int id = get_random_value(0, 100000);
@@ -197,7 +211,7 @@ void Server::data_threaded_loop() {
 		client_mutex.lock();
 		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
 			auto& client_pair = *it;
-			int size = recv(client_pair.second->GetSocket(), buffer, DEFAULT_BUFLEN, 0);
+			int size = recv(client_pair.second->getSocket(), buffer, DEFAULT_BUFLEN, 0);
 			if (size == 0) {
 				//client disconnected
 				//call disconnect handler
@@ -231,7 +245,7 @@ void Server::data_threaded_loop() {
 			if (it != clients.end()) {
 				auto& client_pair = *it;
 				//close socket
-				CloseSocket(client_pair.second->GetSocket());
+				CloseSocket(client_pair.second->getSocket());
 				//free class object
 				delete client_pair.second;
 				//remove from map
@@ -241,6 +255,51 @@ void Server::data_threaded_loop() {
 		ids_to_remove.clear();
 
 		client_mutex.unlock();
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+}
+
+std::pair<unsigned int, ConnectedClient*> Server::getConnectionByAddress(const IPAddress4& address, unsigned short port) {
+	for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
+		auto& client_pair = *it;
+	
+		if (client_pair.second->getPort() == port && client_pair.second->getIP() == address) {
+			return client_pair;
+		}
+	}
+
+	return std::make_pair(0, nullptr);
+}
+
+void Server::data_threaded_udp_loop() {
+	while (status == SERVER_STATUS_UP) {
+		//Receive UDP package
+		sockaddr_in sender;
+		int result = RecvFrom(server_socket, buffer, DEFAULT_BUFLEN, sender);
+
+		client_mutex.lock();
+		auto client = getConnectionByAddress(
+			IPAddress4(GetAddressInteger(sender)), sender.sin_port);
+		client_mutex.unlock();
+
+		if (client.second == nullptr) {
+			ConnectedClient* client = new ConnectedClient(INVALID_SOCKET,
+				IPAddress4(GetAddressInteger(sender)), sender.sin_port);
+
+			client_mutex.lock();
+			unsigned int id = get_random_value(0, 100000);
+			while (clients.find(id) != clients.end())
+				get_random_value(0, 100000);
+			clients.insert(std::make_pair(id, client));
+			client_mutex.unlock();
+		}
+		else {
+			client_mutex.lock();
+			if (client_receive_handler)
+				client_receive_handler(client.second, client.first, buffer, result);
+			client_mutex.unlock();
+		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}

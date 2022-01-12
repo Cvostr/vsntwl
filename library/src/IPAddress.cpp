@@ -38,3 +38,7 @@ IPAddress4& IPAddress4::operator=(const IPAddress4& ip) {
 	this->ip = ip.ip;
 	return *this;
 }
+
+bool IPAddress4::operator==(const IPAddress4& ip) const {
+	return ip.ip == this->ip;
+}

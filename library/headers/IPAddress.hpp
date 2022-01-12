@@ -24,5 +24,6 @@ namespace vsntwl {
 
 		IPAddress4(const IPAddress4& ip);
 		IPAddress4& operator=(const IPAddress4& ip);
+		bool operator==(const IPAddress4& ip) const;
 	};
 }

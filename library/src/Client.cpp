@@ -92,7 +92,15 @@ void Client::disconnect() {
 }
 
 bool Client::sendData(const char* data, unsigned int size) {
-	int result = send(client_socket, data, size, 0);
+	int result = 0;
+	if(inet_protocol == INET_PROTOCOL_TCP)
+		result = send(client_socket, data, size, 0);
+	else if (inet_protocol == INET_PROTOCOL_UDP) {
+		sockaddr_in dest;
+		FillInaddrStruct(address, port, dest);
+		result = SendTo(client_socket, data, size, dest);
+	}
+
 	if (SOCKET_ERROR == result)
 		return false;
 	return true;

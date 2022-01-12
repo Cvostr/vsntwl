@@ -92,12 +92,12 @@ int vsntwl::RecvFrom(SOCKET socket, char* buffer, unsigned int size, sockaddr_in
     return ::recvfrom(socket, buffer, DEFAULT_BUFLEN, 0, (struct sockaddr*)&sender, &addrlen);
 }
 
-int vsntwl::SendTo(SOCKET socket, const char* buffer, unsigned int size, const sockaddr_in& receiver) {
+int vsntwl::SendTo(SOCKET socket, const char* buffer, unsigned int size, const sockaddr_in& dest) {
 #ifdef _WIN32
     int addrlen = sizeof(sockaddr_in);
 #endif
 #ifdef __linux__
     unsigned int addrlen = sizeof(sockaddr_in);
 #endif
-    return ::sendto(socket, buffer, size, 0, (const sockaddr*)&receiver, addrlen);
+    return ::sendto(socket, buffer, size, 0, (const sockaddr*)&dest, addrlen);
 }

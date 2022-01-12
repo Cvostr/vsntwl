@@ -7,24 +7,9 @@
 #include <map>
 #include <functional>
 #include <IPAddress.hpp>
+#include "ConnectedClient.hpp"
 
 namespace vsntwl {
-	class ConnectedClient {
-	private:
-		SOCKET client_socket;
-		IPAddress4 client_ip;
-	public:
-
-		SOCKET GetSocket() const {
-			return client_socket;
-		}
-
-		ConnectedClient(SOCKET sock, IPAddress4 ip) {
-			client_socket = sock;
-			client_ip = ip;
-		}
-	};
-
 	typedef std::function<void(ConnectedClient*, unsigned int)> client_conn_function;
 	typedef std::function<void(ConnectedClient*, unsigned int, char*, unsigned int)> server_receive_function;
 	typedef std::function<void(IPAddress4&, unsigned short, char*, unsigned int)> server_udp_receive_function;
@@ -54,6 +39,9 @@ namespace vsntwl {
 		void disable_tcp_blocking();
 		void accept_threaded_loop();
 		void data_threaded_loop();
+		void data_threaded_udp_loop();
+
+		std::pair<unsigned int, ConnectedClient*> getConnectionByAddress(const IPAddress4& address, unsigned short port);
 	public:
 
 		Server();
