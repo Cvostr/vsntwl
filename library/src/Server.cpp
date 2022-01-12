@@ -99,11 +99,13 @@ void Server::stop() {
 		status = SERVER_STATUS_DOWN;
 		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
 			auto& client_pair = *it;
+			//disconnect client
+			CloseSocket(client_pair.second->GetSocket());
 			//free class object
 			delete client_pair.second;
-			//remove from map
-			clients.erase(it);
 		}
+		//clear map
+		clients.clear();
 	}
 }
 void Server::disconnect(unsigned int id) {
@@ -153,7 +155,7 @@ int Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned 
 void Server::accept_threaded_loop() {
 	while (status == SERVER_STATUS_UP) {
 		sockaddr_in client_address;
-		unsigned int addrlen = sizeof(sockaddr_in);
+		int addrlen = sizeof(sockaddr_in);
 
 		client_mutex.lock();
 		unsigned int connected_count = clients.size();
