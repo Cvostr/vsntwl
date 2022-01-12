@@ -179,6 +179,8 @@ void Server::accept_threaded_loop() {
 		client_mutex.unlock();
 		//accept new client
 		SOCKET client_socket = AcceptSocket(server_socket, client_address);
+
+		DisableBlocking(client_socket);
 		//check socket
 		if (client_socket != INVALID_SOCKET) {
 			//check connected clients count

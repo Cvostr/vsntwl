@@ -2,6 +2,7 @@
 
 #ifdef __linux__
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #endif
 
 int vsntwl::CloseSocket(SOCKET socket){
@@ -25,8 +26,8 @@ int vsntwl::GetLastSockErrCode(){
 }
 
 int vsntwl::DisableBlocking(SOCKET socket){
-    u_long iMode = 1;
 #ifdef _WIN32
+    u_long iMode = 1;
     return ::ioctlsocket(socket, FIONBIO, &iMode);
 #endif
 
@@ -34,8 +35,11 @@ int vsntwl::DisableBlocking(SOCKET socket){
     int flags = fcntl(socket, F_GETFL, 0);
     if (flags == -1) 
         return false;
-    flags &= ~O_NONBLOCK;
+    flags |= O_NONBLOCK;
     int result = fcntl(socket, F_SETFL, flags);
+
+    //int imode = 1;
+    //ioctl(socket , FIONBIO, &imode);
     return result;
 #endif
 }
