@@ -115,7 +115,9 @@ void Server::disconnect(unsigned int id) {
 	if (it != clients.end()) {
 		ConnectedClient* client = clients.at(id);
 		client_disconnect_handler(client, id);
+		
 		CloseSocket(client->GetSocket());
+
 		delete clients.at(id);
 		clients.erase(id);
 	}

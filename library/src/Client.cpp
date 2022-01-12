@@ -66,7 +66,7 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 				return CLIENT_ERROR_CONNECTION;
 			}
 			//disable blocking
-			//disable_tcp_blocking();
+			disable_tcp_blocking();
 		}
 
 		if (client_thread) {
@@ -84,8 +84,9 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 }
 void Client::disconnect() {
 	if (status == CLIENT_STATUS_CONNECTED) {
-		CloseSocket(client_socket);
 		status = CLIENT_STATUS_DISCONNECTED;
+		shutdown(client_socket, 0);
+		CloseSocket(client_socket);
 	}
 }
 
