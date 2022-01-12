@@ -94,9 +94,11 @@ int main(int argc, char** argv) {
 		}
 		if (ch == 'e') {
 			cl->disconnect();
-			return 0;
+			break;
 		}
 	}
+
+	delete cl;
 
 	return 0;
 }

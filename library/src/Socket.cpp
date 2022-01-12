@@ -27,7 +27,7 @@ int vsntwl::GetLastSockErrCode(){
 int vsntwl::DisableBlocking(SOCKET socket){
     u_long iMode = 1;
 #ifdef _WIN32
-    return ioctlsocket(socket, FIONBIO, &iMode);
+    return ::ioctlsocket(socket, FIONBIO, &iMode);
 #endif
 
 #ifdef __linux__
@@ -79,7 +79,7 @@ SOCKET vsntwl::AcceptSocket(SOCKET socket, sockaddr_in& in){
 #ifdef __linux__
     unsigned int addrlen = sizeof(sockaddr_in);
 #endif
-    return accept(socket, (struct sockaddr*)&in, &addrlen);
+    return ::accept(socket, (struct sockaddr*)&in, &addrlen);
 }
 
 int vsntwl::RecvFrom(SOCKET socket, char* buffer, unsigned int size, sockaddr_in& sender){
@@ -89,5 +89,15 @@ int vsntwl::RecvFrom(SOCKET socket, char* buffer, unsigned int size, sockaddr_in
 #ifdef __linux__
     unsigned int addrlen = sizeof(sockaddr_in);
 #endif
-    return recvfrom(socket, buffer, DEFAULT_BUFLEN, 0, (struct sockaddr*)&sender, &addrlen);
+    return ::recvfrom(socket, buffer, DEFAULT_BUFLEN, 0, (struct sockaddr*)&sender, &addrlen);
+}
+
+int vsntwl::SendTo(SOCKET socket, const char* buffer, unsigned int size, const sockaddr_in& receiver) {
+#ifdef _WIN32
+    int addrlen = sizeof(sockaddr_in);
+#endif
+#ifdef __linux__
+    unsigned int addrlen = sizeof(sockaddr_in);
+#endif
+    return ::sendto(socket, buffer, size, 0, (const sockaddr*)&receiver, addrlen);
 }

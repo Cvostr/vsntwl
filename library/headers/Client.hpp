@@ -21,7 +21,7 @@ namespace vsntwl {
 
 		ClientStatus status;
 
-		std::thread client_thread;
+		std::thread* client_thread;
 		client_receive_function receive_handler;
 		client_disconnect_function disconnect_handler;
 

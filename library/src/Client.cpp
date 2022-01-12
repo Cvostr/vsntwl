@@ -10,11 +10,18 @@ Client::Client() {
 	port = 34759;
 	inet_protocol = INET_PROTOCOL_TCP;
 	status = CLIENT_STATUS_DISCONNECTED;
-
+	client_thread = nullptr;
 	buffer = new char[DEFAULT_BUFLEN];
 }
 Client::~Client() {
+	disconnect();
+
 	delete[] buffer;
+
+	if (client_thread) {
+		client_thread->join();
+		delete client_thread;
+	}
 }
 
 void Client::setInetProtocol(InetProtocol protocol) {
@@ -45,11 +52,7 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 		client_socket = socket(AF_INET, ConvertProtocol(inet_protocol), 0);
 		if (INVALID_SOCKET == client_socket)
 		{
-			return CLIENT_CONNECTION_FAILED;
-		}
-		if (inet_protocol == INET_PROTOCOL_TCP) {
-			//disable blocking
-			disable_tcp_blocking();
+			return CLIENT_ERROR_SOCKET;
 		}
 		//Filling struct
 		sockaddr_in as_addr;
@@ -59,16 +62,22 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 			//connecting socket
 			if (SOCKET_ERROR == (connect(client_socket, (sockaddr*)&as_addr, sizeof(as_addr))))
 			{
-				return CLIENT_CONNECTION_FAILED;
+				CloseSocket(client_socket);
+				return CLIENT_ERROR_CONNECTION;
 			}
+			//disable blocking
+			//disable_tcp_blocking();
 		}
-		if (client_thread.joinable())
-			client_thread.join();
+
+		if (client_thread) {
+			client_thread->join();
+			delete client_thread;
+		}
 		//set client status to connected
 		status = CLIENT_STATUS_CONNECTED;
 		//start client thread
 		
-		client_thread = std::thread([this] {client_threaded_loop(); });
+		client_thread = new std::thread([this] {client_threaded_loop(); });
 	}
 
 	return CLIENT_CONNECTED;

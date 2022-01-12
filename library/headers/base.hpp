@@ -51,13 +51,16 @@ enum ServerStartResult {
 
 enum ClientConnectResult {
 	CLIENT_CONNECTED,
-	CLIENT_CONNECTION_FAILED
+	CLIENT_ERROR_SOCKET,
+	CLIENT_ERROR_CONNECTION
 };
 
 enum DisconnectionType {
 	DISCONNECTION_TYPE_MANUAL,
 	DISCONNECTION_TYPE_FORCIBLY
 };
+
+#define vsntwl_free(x) delete x; x = nullptr;
 
 int ConvertProtocol(InetProtocol protocol);
 unsigned int get_random_value();
