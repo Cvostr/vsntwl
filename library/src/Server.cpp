@@ -155,13 +155,12 @@ int Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned 
 void Server::accept_threaded_loop() {
 	while (status == SERVER_STATUS_UP) {
 		sockaddr_in client_address;
-		int addrlen = sizeof(sockaddr_in);
 
 		client_mutex.lock();
 		unsigned int connected_count = clients.size();
 		client_mutex.unlock();
 		//accept new client
-		SOCKET client_socket = accept(server_socket, (struct sockaddr*)&client_address, &addrlen);
+		SOCKET client_socket = AcceptSocket(server_socket, client_address);
 		//check socket
 		if (client_socket != INVALID_SOCKET) {
 			//check connected clients count

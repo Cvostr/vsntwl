@@ -71,3 +71,23 @@ unsigned int vsntwl::GetAddressInteger(const sockaddr_in& in){
     return in.sin_addr.s_addr;
 #endif
 }
+
+SOCKET vsntwl::AcceptSocket(SOCKET socket, sockaddr_in& in){
+#ifdef _WIN32
+    int addrlen = sizeof(sockaddr_in);
+#endif
+#ifdef __linux__
+    unsigned int addrlen = sizeof(sockaddr_in);
+#endif
+    return accept(socket, (struct sockaddr*)&in, &addrlen);
+}
+
+int vsntwl::RecvFrom(SOCKET socket, char* buffer, unsigned int size, sockaddr_in& sender){
+#ifdef _WIN32
+    int addrlen = sizeof(sockaddr_in);
+#endif
+#ifdef __linux__
+    unsigned int addrlen = sizeof(sockaddr_in);
+#endif
+    return recvfrom(socket, buffer, DEFAULT_BUFLEN, 0, (struct sockaddr*)&sender, &addrlen);
+}

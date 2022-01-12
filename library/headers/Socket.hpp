@@ -11,4 +11,7 @@ namespace vsntwl {
 	void FillInaddrStruct(const IPAddress4& address, unsigned short port, sockaddr_in& out);
 	void FillInaddrStruct(unsigned short port, sockaddr_in& out);
 	unsigned int GetAddressInteger(const sockaddr_in& in);
+	SOCKET AcceptSocket(SOCKET socket, sockaddr_in& in);
+	//UDP
+	int RecvFrom(SOCKET socket, char* buffer, unsigned int size, sockaddr_in& sender);
 }

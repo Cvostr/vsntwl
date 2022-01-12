@@ -47,6 +47,10 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 		{
 			return CLIENT_CONNECTION_FAILED;
 		}
+		if (inet_protocol == INET_PROTOCOL_TCP) {
+			//disable blocking
+			disable_tcp_blocking();
+		}
 		//Filling struct
 		sockaddr_in as_addr;
 		FillInaddrStruct(address, port, as_addr);
@@ -57,14 +61,13 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 			{
 				return CLIENT_CONNECTION_FAILED;
 			}
-			//disable blocking
-			disable_tcp_blocking();
 		}
+		if (client_thread.joinable())
+			client_thread.join();
 		//set client status to connected
 		status = CLIENT_STATUS_CONNECTED;
 		//start client thread
-		if (client_thread.joinable())
-			client_thread.join();
+		
 		client_thread = std::thread([this] {client_threaded_loop(); });
 	}
 
@@ -120,11 +123,11 @@ void Client::client_tcp_function() {
 }
 
 void Client::client_udp_function() {
-	sockaddr from;
+	sockaddr_in from;
 	int from_len = 0;
-	//int size = recvfrom(client_socket, buffer, DEFAULT_BUFLEN, 0, &from, &from_len);
-	//if (size > 0) {
-	//	if (receive_handler != nullptr)
-	//		receive_handler(buffer, size);
-	//}
+	int size = RecvFrom(client_socket, buffer, DEFAULT_BUFLEN, from);
+	if (size > 0) {
+		if (receive_handler != nullptr)
+			receive_handler(buffer, size);
+	}
 }
