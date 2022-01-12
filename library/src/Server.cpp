@@ -97,6 +97,7 @@ void Server::stop() {
 		//close socket forcefully
 		CloseSocket(server_socket);
 		status = SERVER_STATUS_DOWN;
+		client_mutex.lock();
 		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
 			auto& client_pair = *it;
 			//disconnect client
@@ -106,6 +107,7 @@ void Server::stop() {
 		}
 		//clear map
 		clients.clear();
+		client_mutex.unlock();
 	}
 }
 void Server::disconnect(unsigned int id) {

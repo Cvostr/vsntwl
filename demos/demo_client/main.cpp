@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 	});
 
 	cl->setDisconnectHandler([]() {
-		std::cout << "Client disconnected" << std::endl;
+		std::cout << "Client disconnected from server" << std::endl;
 	});
 
 	connect(cl, IPAddress4());
@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
 		}
 		if (ch == 'd') {
 			cl->disconnect();
+			std::cout << "Client disconnected" << std::endl;
 		}
 		if (ch == 'c')
 			connect(cl, IPAddress4());

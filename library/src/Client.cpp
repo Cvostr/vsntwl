@@ -87,6 +87,7 @@ void Client::disconnect() {
 		status = CLIENT_STATUS_DISCONNECTED;
 		shutdown(client_socket, 0);
 		CloseSocket(client_socket);
+		client_socket = INVALID_SOCKET;
 	}
 }
 
@@ -104,11 +105,13 @@ void Client::client_threaded_loop() {
 		else if (inet_protocol == INET_PROTOCOL_UDP)
 			client_udp_function();
 		//sleep some time
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(15));
 	}
 }
 
 void Client::client_tcp_function() {
+	if (client_socket == INVALID_SOCKET)
+		return;
 	int size = recv(client_socket, buffer, DEFAULT_BUFLEN, 0);
 	if (size == 0) {
 		//disconnected by server manually
