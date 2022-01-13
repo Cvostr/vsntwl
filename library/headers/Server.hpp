@@ -29,14 +29,13 @@ namespace vsntwl {
 		std::mutex client_mutex;
 
 		std::map<unsigned int, ConnectedClient*> clients;
-
 		char* buffer;
 
 		client_conn_function client_connect_handler;
 		server_receive_function client_receive_handler;
 		client_conn_function client_disconnect_handler;
 
-		void disable_tcp_blocking();
+		void disable_socket_blocking();
 		void accept_threaded_loop();
 		void data_threaded_loop();
 		void data_threaded_udp_loop();
@@ -68,7 +67,7 @@ namespace vsntwl {
 		void stop();
 		//disconnect client by its id
 		void disconnect(unsigned int id);
-
+		//handler for client connected event
 		void setClientConnectedHandler(client_conn_function const& handler);
 		void setClientDataReceiveHandler(server_receive_function const& handler);
 		void setClientDisconnectedHandler(client_conn_function const& handler);

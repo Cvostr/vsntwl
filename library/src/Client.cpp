@@ -36,6 +36,10 @@ ClientStatus Client::getStatus() const {
 	return status;
 }
 
+const PacketStats& Client::GetPacketStats() const {
+	return packet_stats;
+}
+
 void Client::setDataReceivedHandler(client_receive_function const& handler) {
 	receive_handler = handler;
 }
@@ -75,8 +79,12 @@ ClientConnectResult Client::Connect(IPAddress4 address, unsigned short port) {
 		}
 		//set client status to connected
 		status = CLIENT_STATUS_CONNECTED;
+		//if we using udp, send something to server
+		if (inet_protocol == INET_PROTOCOL_UDP) {
+			unsigned short welcome = 0x56F4;
+			sendData((const char*)&welcome, 2);
+		}
 		//start client thread
-		
 		client_thread = new std::thread([this] {client_threaded_loop(); });
 	}
 
@@ -100,6 +108,8 @@ bool Client::sendData(const char* data, unsigned int size) {
 		FillInaddrStruct(address, port, dest);
 		result = SendTo(client_socket, data, size, dest);
 	}
+
+	packet_stats.sent_packets++;
 
 	if (SOCKET_ERROR == result)
 		return false;
@@ -128,6 +138,7 @@ void Client::client_tcp_function() {
 		disconnect();
 	}
 	else if (size > 0) {
+		packet_stats.received_packets++;
 		//data received
 		if (receive_handler != nullptr)
 			receive_handler(buffer, size);

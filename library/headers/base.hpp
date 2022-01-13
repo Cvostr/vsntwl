@@ -60,6 +60,19 @@ enum DisconnectionType {
 	DISCONNECTION_TYPE_FORCIBLY
 };
 
+struct PacketStats {
+	unsigned int received_packets;
+	unsigned int sent_packets;
+
+	PacketStats() : received_packets(0), sent_packets(0) {}
+};
+
+struct UDP_ReliablePacket {
+	unsigned int pk_num;
+	unsigned int ps_size;
+	char* data;
+};
+
 #define vsntwl_free(x) delete x; x = nullptr;
 
 int ConvertProtocol(InetProtocol protocol);

@@ -52,10 +52,8 @@ void Server::setClientDataReceiveHandler(server_receive_function const& handler)
 void Server::setClientDisconnectedHandler(client_conn_function const& handler) {
 	this->client_disconnect_handler = handler;
 }
-void Server::disable_tcp_blocking() {
-	if (inet_protocol == INET_PROTOCOL_TCP) {
-		DisableBlocking(server_socket);
-	}
+void Server::disable_socket_blocking() {
+	DisableBlocking(server_socket);
 }
 
 ServerStartResult Server::start() {
@@ -69,7 +67,7 @@ ServerStartResult Server::start() {
 		if (server_socket == INVALID_SOCKET)
 			return SERVER_ERROR_ON_INIT;
 		//disable blocking
-		disable_tcp_blocking();
+		disable_socket_blocking();
 
 		if (bind(server_socket, (struct sockaddr*)&address, sizeof(address)) == SOCKET_ERROR){
 			CloseSocket(server_socket);
@@ -173,34 +171,39 @@ int Server::sendClientNoLock(unsigned int client_id, const char* data, unsigned 
 void Server::accept_threaded_loop() {
 	while (status == SERVER_STATUS_UP) {
 		sockaddr_in client_address;
-
+		//get current connected clients
 		client_mutex.lock();
 		unsigned int connected_count = clients.size();
 		client_mutex.unlock();
 		//accept new client
 		SOCKET client_socket = AcceptSocket(server_socket, client_address);
-
+		//disable blocking on client socket
 		DisableBlocking(client_socket);
 		//check socket
 		if (client_socket != INVALID_SOCKET) {
 			//check connected clients count
+			//if limit reached, disconnect client
 			if (max_connections > 0 && connected_count == max_connections) {
 				CloseSocket(client_socket);
-				break;
 			}
-			//new client connected to server
-			ConnectedClient* client = new ConnectedClient(client_socket, 
-				IPAddress4(GetAddressInteger(client_address)), client_address.sin_port);
-
-			client_mutex.lock();
-			unsigned int id = get_random_value(0, 100000);
-			while(clients.find(id) != clients.end())
-				get_random_value(0, 100000);
-			clients.insert(std::make_pair(id, client));
-			//call function
-			if (client_connect_handler != nullptr)
-				client_connect_handler(client, id);	
-			client_mutex.unlock();
+			else {
+				//new client connected to server
+				ConnectedClient* client = new ConnectedClient(client_socket,
+					IPAddress4(GetAddressInteger(client_address)), client_address.sin_port);
+				//Add new client
+				client_mutex.lock();
+				//generate random client ID
+				unsigned int id = get_random_value(0, 100000);
+				while (clients.find(id) != clients.end())
+					get_random_value(0, 100000);
+				//insert client to map
+				clients.insert(std::make_pair(id, client));
+				//call function
+				if (client_connect_handler != nullptr)
+					client_connect_handler(client, id);
+				//unlock mutex
+				client_mutex.unlock();
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -279,28 +282,33 @@ void Server::data_threaded_udp_loop() {
 		//Receive UDP package
 		sockaddr_in sender;
 		int result = RecvFrom(server_socket, buffer, DEFAULT_BUFLEN, sender);
-
-		client_mutex.lock();
-		auto client = getConnectionByAddress(
-			IPAddress4(GetAddressInteger(sender)), sender.sin_port);
-		client_mutex.unlock();
-
-		if (client.second == nullptr) {
-			ConnectedClient* client = new ConnectedClient(INVALID_SOCKET,
+		
+		if (result >= 0) {
+			client_mutex.lock();
+			auto client = getConnectionByAddress(
 				IPAddress4(GetAddressInteger(sender)), sender.sin_port);
+			client_mutex.unlock();
 
-			client_mutex.lock();
-			unsigned int id = get_random_value(0, 100000);
-			while (clients.find(id) != clients.end())
-				get_random_value(0, 100000);
-			clients.insert(std::make_pair(id, client));
-			client_mutex.unlock();
-		}
-		else {
-			client_mutex.lock();
-			if (client_receive_handler)
-				client_receive_handler(client.second, client.first, buffer, result);
-			client_mutex.unlock();
+			if (client.second == nullptr) {
+				ConnectedClient* client = new ConnectedClient(INVALID_SOCKET,
+					IPAddress4(GetAddressInteger(sender)), sender.sin_port);
+
+				client_mutex.lock();
+				unsigned int id = get_random_value(0, 100000);
+				while (clients.find(id) != clients.end())
+					get_random_value(0, 100000);
+				clients.insert(std::make_pair(id, client));
+				//call function
+				if (client_connect_handler != nullptr)
+					client_connect_handler(client, id);
+				client_mutex.unlock();
+			}
+			else {
+				client_mutex.lock();
+				if (client_receive_handler)
+					client_receive_handler(client.second, client.first, buffer, result);
+				client_mutex.unlock();
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));

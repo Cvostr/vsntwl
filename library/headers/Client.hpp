@@ -19,13 +19,13 @@ namespace vsntwl {
 		InetProtocol inet_protocol;
 		IPAddress4 address;
 
-		ClientStatus status;
+		ClientStatus status; 
+		char* buffer;
+		PacketStats packet_stats;
 
 		std::thread* client_thread;
 		client_receive_function receive_handler;
 		client_disconnect_function disconnect_handler;
-
-		char* buffer;
 
 		void client_threaded_loop();
 
@@ -42,13 +42,16 @@ namespace vsntwl {
 		InetProtocol getInetProtocol() const;
 		//get current client status
 		ClientStatus getStatus() const;
+		//get packets stats
+		const PacketStats& GetPacketStats() const;
 		//connect to server
 		ClientConnectResult Connect(IPAddress4 address, unsigned short port);
 		//disconnect from server
 		void disconnect();
 		//Send data to server
+		//if UDP, this method is INRELIABLE
 		bool sendData(const char* data, unsigned int size);
-
+		//set data receive event handler
 		void setDataReceivedHandler(client_receive_function const& handler);
 		void setDisconnectHandler(client_disconnect_function const& handler);
 	};

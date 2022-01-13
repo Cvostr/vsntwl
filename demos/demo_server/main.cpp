@@ -30,8 +30,8 @@ int main(int argc, char** argv) {
 	init();
 
 	Server* serv = new Server;
-	serv->setInetProtocol(INET_PROTOCOL_UDP);
-	//serv->setMaxConnections(2);
+	//serv->setInetProtocol(INET_PROTOCOL_UDP);
+	serv->setMaxConnections(2);
 	serv->setClientConnectedHandler([](ConnectedClient* client, unsigned int id) {
 		std::cout << "Connected client " << id << std::endl;
 	});
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
 		char* answ = "answer to client";
 
-		//serv->sendClientNoLock(id, answ, 16);
+		serv->sendClientNoLock(id, answ, 16);
 	});
 
 	serv->setClientDisconnectedHandler([](ConnectedClient* client, unsigned int id) {
