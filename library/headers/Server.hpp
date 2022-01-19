@@ -15,18 +15,13 @@ namespace vsntwl {
 	typedef std::function<void(IPAddress4&, unsigned short, char*, unsigned int)> server_udp_receive_function;
 
 	class Server {
-	private:
+	protected:
 		unsigned short port;
-		InetProtocol inet_protocol;
 		unsigned int max_connections;
 
 		ServerStatus status;
 
 		SOCKET server_socket;
-
-		std::thread accept_thread;
-		std::thread data_thread;
-		std::mutex client_mutex;
 
 		std::map<unsigned int, ConnectedClient*> clients;
 		char* buffer;
@@ -36,15 +31,12 @@ namespace vsntwl {
 		client_conn_function client_disconnect_handler;
 
 		void disable_socket_blocking();
-		void accept_threaded_loop();
-		void data_threaded_loop();
-		void data_threaded_udp_loop();
 
 		std::pair<unsigned int, ConnectedClient*> getConnectionByAddress(const IPAddress4& address, unsigned short port);
 	public:
 
 		Server();
-		~Server();
+		virtual ~Server();
 		//set server port
 		void setPort(unsigned short port);
 		//get server port
@@ -53,20 +45,18 @@ namespace vsntwl {
 		void setMaxConnections(unsigned int max_connections);
 		//get max clients connections
 		unsigned int getMaxConnections() const;
-		//set internet protocol for this server (TCP, UDP)
-		void setInetProtocol(InetProtocol protocol);
 		//get inet protocol, that set to this server
-		InetProtocol getInetProtocol() const;
+		virtual InetProtocol getInetProtocol() const = 0;
 		//get current server status
 		ServerStatus getStatus() const;
 		//get all connected clients
 		const std::map<unsigned int, ConnectedClient*>& getClients() const;
 		//try to start server
-		ServerStartResult start();
+		virtual ServerStartResult start() = 0;
 		//disconnect all clients and stop server
-		void stop();
+		virtual void stop() = 0;
 		//disconnect client by its id
-		void disconnect(unsigned int id);
+		virtual void disconnect(unsigned int id) = 0;
 		//handler for client connected event
 		void setClientConnectedHandler(client_conn_function const& handler);
 		void setClientDataReceiveHandler(server_receive_function const& handler);

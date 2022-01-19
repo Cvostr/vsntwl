@@ -26,6 +26,14 @@ typedef int SOCKET;
 
 #define DEFAULT_BUFLEN 1500
 
+#define UDP_PREFIX_USER_CONNECTION 0x1
+#define UDP_PREFIX_USER_DISCONNECTION 0x2
+#define UDP_PREFIX_ACK 0x3
+#define UDP_PREFIX_SUCCESS 0x4
+#define UDP_PREFIX_FAIL 0x5
+#define UDP_PREFIX_PACKET 0x6
+#define UDP_PREFIX_PACKET_RECEIVED 0x7
+
 enum InetProtocol {
 	INET_PROTOCOL_TCP,
 	INET_PROTOCOL_UDP
@@ -69,8 +77,9 @@ struct PacketStats {
 
 struct UDP_ReliablePacket {
 	unsigned int pk_num;
-	unsigned int ps_size;
-	char* data;
+	unsigned int pk_size;
+	unsigned int last_try_time;
+	char* pk_data;
 };
 
 #define vsntwl_free(x) delete x; x = nullptr;

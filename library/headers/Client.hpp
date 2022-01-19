@@ -12,45 +12,34 @@ namespace vsntwl {
 	typedef std::function<void()> client_disconnect_function;
 
 	class Client {
-	private:
+	protected:
 		SOCKET client_socket;
 
 		unsigned short port;
-		InetProtocol inet_protocol;
 		IPAddress4 address;
 
-		ClientStatus status; 
+		ClientStatus status;
 		char* buffer;
 		PacketStats packet_stats;
+		std::thread client_thread;
 
-		std::thread* client_thread;
 		client_receive_function receive_handler;
 		client_disconnect_function disconnect_handler;
 
-		void client_threaded_loop();
-
-		void disable_tcp_blocking();
-
-		void client_tcp_function();
-		void client_udp_function();
+		void disable_blocking();
 	public:
 		Client();
-		~Client();
-		//set internet protocol for this client (TCP, UDP)
-		void setInetProtocol(InetProtocol protocol);
+		virtual ~Client();
 		//get inet protocol, that set to this client
-		InetProtocol getInetProtocol() const;
+		virtual InetProtocol getInetProtocol() const = 0;
 		//get current client status
 		ClientStatus getStatus() const;
 		//get packets stats
 		const PacketStats& GetPacketStats() const;
 		//connect to server
-		ClientConnectResult Connect(IPAddress4 address, unsigned short port);
+		virtual ClientConnectResult Connect(IPAddress4 address, unsigned short port) = 0;
 		//disconnect from server
-		void disconnect();
-		//Send data to server
-		//if UDP, this method is INRELIABLE
-		bool sendData(const char* data, unsigned int size);
+		virtual void disconnect() {}
 		//set data receive event handler
 		void setDataReceivedHandler(client_receive_function const& handler);
 		void setDisconnectHandler(client_disconnect_function const& handler);

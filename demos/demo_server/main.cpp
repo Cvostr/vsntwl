@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vsntwl.hpp>
-#include <Server.hpp>
+#include <TCPServer.hpp>
+#include <UDPServer.hpp>
 #include <Socket.hpp>
 #include <stdio.h>
 
@@ -29,7 +30,7 @@ using namespace vsntwl;
 int main(int argc, char** argv) {
 	init();
 
-	Server* serv = new Server;
+	UDPServer* serv = new UDPServer;
 	//serv->setInetProtocol(INET_PROTOCOL_UDP);
 	serv->setMaxConnections(2);
 	serv->setClientConnectedHandler([](ConnectedClient* client, unsigned int id) {
