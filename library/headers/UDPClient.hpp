@@ -10,13 +10,20 @@ namespace vsntwl {
 		std::thread* client_thread;
 		sockaddr_in server_addr;
 		std::vector<UDP_ReliablePacket*> reliable_packets;
+		unsigned int last_time_conn_check;
+		char* temp_send_buffer;
 
 		void client_threaded_loop();
 		void client_udp_function();
 		//sends just raw data without prefixes
 		int sendPacket(const char* data, unsigned int size);
+		int receivePacket(char* data, unsigned int size);
 
-		unsigned int sendReliablePacket(const char* data, unsigned int size)
+		unsigned int sendReliablePacket(const char* data, unsigned int size);
+
+		bool waitForConnection();
+		bool waitForDisconnection();
+		bool waitForConnAck(char prefix = UDP_PREFIX_CONN_ACK, unsigned int timeout = DEFAULT_UDP_CONNECT_TIMEOUT);
 	public:
 		UDPClient();
 		~UDPClient();

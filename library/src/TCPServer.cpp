@@ -33,21 +33,15 @@ ServerStartResult TCPServer::start() {
 			return SERVER_ERROR_ON_BIND;
 		}
 		
-		//if (inet_protocol != INET_PROTOCOL_UDP) {
-			if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR){
-				CloseSocket(server_socket);
-				return SERVER_ERROR_ON_LISTEN;
-			}
-		//}
+		if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR){
+			CloseSocket(server_socket);
+			return SERVER_ERROR_ON_LISTEN;
+		}
 		//update status
 		status = SERVER_STATUS_UP;
 		//start server loop
-		//if (inet_protocol == INET_PROTOCOL_TCP) 
-			accept_thread = std::thread([this] {accept_threaded_loop(); });
-		//if (inet_protocol == INET_PROTOCOL_TCP)
-			data_thread = std::thread([this] {data_threaded_loop(); });
-		//else
-		//	data_thread = std::thread([this] {data_threaded_udp_loop(); });
+		accept_thread = std::thread([this] {accept_threaded_loop(); });
+		data_thread = std::thread([this] {data_threaded_loop(); });
 	}
 	//return successful
 	return SERVER_START_SUCCESSFUL;
@@ -116,20 +110,11 @@ int TCPServer::sendClientNoLock(unsigned int client_id, const char* data, unsign
 	auto it = clients.find(client_id);
 	int result = 0;
 	if (it != clients.end()) {
-		//if(inet_protocol == INET_PROTOCOL_TCP)
 		result = send(clients.at(client_id)->getSocket(), data, size, 0);
-		/*else if (inet_protocol == INET_PROTOCOL_UDP) {
-			auto& pair = *it;
-			sockaddr_in dest;
-			FillInaddrStruct(pair.second->getIP(), pair.second->getPort(), dest);
-			dest.sin_port = pair.second->getPort();
-			SendTo(server_socket, data, size, dest);
-		}*/
 	}
 
 	return result;
 }
-
 
 void TCPServer::accept_threaded_loop() {
 	while (status == SERVER_STATUS_UP) {

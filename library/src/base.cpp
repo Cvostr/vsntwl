@@ -1,6 +1,8 @@
 #define INCLUDE_SYS_SOCKETS
 #include <base.hpp>
 #include <ctime>
+#include <chrono>
+#include <thread>
 
 static unsigned int rand_seed = time(0);
 
@@ -24,4 +26,13 @@ unsigned int get_random_value() {
 
 unsigned int get_random_value(unsigned int min, unsigned int max) {
 	return min + get_random_value() % (max - min);
+}
+
+unsigned int get_current_time_ms() {
+	const auto p1 = std::chrono::system_clock::now();
+	return std::chrono::duration_cast<std::chrono::milliseconds>(p1.time_since_epoch()).count();
+}
+
+void sleep_cur_thread_ms(unsigned int time) {
+	std::this_thread::sleep_for(std::chrono::milliseconds(time));
 }

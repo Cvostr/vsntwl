@@ -4,10 +4,11 @@
 using namespace vsntwl;
 
 UDPServer::UDPServer() : Server() {
-
+	temp_send_buffer = new char[DEFAULT_BUFLEN];
 }
 
 UDPServer::~UDPServer() {
+	delete[] temp_send_buffer;
 	stop();
 }
 
@@ -37,6 +38,8 @@ ServerStartResult UDPServer::start() {
 		status = SERVER_STATUS_UP;
 		//start server loop
 		data_thread = std::thread([this] {data_threaded_loop(); });
+
+		clients_check_thread = std::thread([this] {clients_check_loop();  });
 	}
 	//return successful
 	return SERVER_START_SUCCESSFUL;
@@ -71,10 +74,6 @@ void UDPServer::disconnect(unsigned int id) {
 		ConnectedClient* client = clients.at(id);
 		client_disconnect_handler(client, id);
 
-		SOCKET socket = client->getSocket();
-		if (socket != INVALID_SOCKET)
-			CloseSocket(socket);
-
 		delete clients.at(id);
 		clients.erase(id);
 	}
@@ -101,7 +100,7 @@ void UDPServer::sendClient(unsigned int client_id, const char* data, unsigned in
 	client_mutex.unlock();
 }
 
-int UDPServer::sendClientNoLock(unsigned int client_id, const char* data, unsigned int size) {
+int UDPServer::sendPacketClientNoLock(unsigned int client_id, const char* data, unsigned int size) {
 	auto it = clients.find(client_id);
 	int result = 0;
 	if (it != clients.end()) {
@@ -115,7 +114,65 @@ int UDPServer::sendClientNoLock(unsigned int client_id, const char* data, unsign
 	return result;
 }
 
+int UDPServer::sendClientNoLock(unsigned int client_id, const char* data, unsigned int size) {
+	auto it = clients.find(client_id);
+	int result = 0;
+	if (it != clients.end()) {
+		temp_send_buffer[0] = UDP_PREFIX_PACKET;
+		//*((int*)(&temp_send_buffer[1])) = packet_stats.sent_packets;
+		memcpy(&temp_send_buffer[5], data, size);
+
+		auto& pair = *it;
+		sockaddr_in dest;
+		FillInaddrStruct(pair.second->getIP(), pair.second->getPort(), dest);
+		dest.sin_port = pair.second->getPort();
+		SendTo(server_socket, temp_send_buffer, size + 5, dest);
+	}
+
+	return result;
+}
+
+void UDPServer::clients_check_loop() {
+	std::vector<unsigned int> ids_to_remove;
+	while (status == SERVER_STATUS_UP) {
+		client_mutex.lock();
+
+		for (auto it = clients.begin(), end = clients.end(); it != end; ++it) {
+			auto& client = *it;
+			char conn_check = UDP_PREFIX_CONN_CHECK;
+			sendPacketClientNoLock(client.first, &conn_check, 1);
+			unsigned int diff = get_current_time_ms() - client.second->getLastConnCheckTime();
+			if (diff > UDP_CONN_CHECK_TIMEOUT) {
+				//call disconnection handler
+				if (client_disconnect_handler != nullptr)
+					client_disconnect_handler(client.second, client.first);
+				//add client's id to delete list
+				ids_to_remove.push_back(client.first);
+			}
+		}
+		//remove clients
+		for (const auto& to_remove : ids_to_remove) {
+			auto it = clients.find(to_remove);
+			//check iterator
+			if (it != clients.end()) {
+				auto& client_pair = *it;
+				//close socket
+				CloseSocket(client_pair.second->getSocket());
+				//free class object
+				delete client_pair.second;
+				//remove from map
+				clients.erase(it);
+			}
+		}
+		ids_to_remove.clear();
+
+		client_mutex.unlock();
+		sleep_cur_thread_ms(60);
+	}
+}
+
 void UDPServer::data_threaded_loop() {
+	std::vector<unsigned int> ids_to_remove;
 	while (status == SERVER_STATUS_UP) {
 		//Receive UDP package
 		sockaddr_in sender;
@@ -128,10 +185,9 @@ void UDPServer::data_threaded_loop() {
 			client_mutex.unlock();
 
 			if (client.second == nullptr) {
-				ConnectedClient* client = new ConnectedClient(INVALID_SOCKET,
-					IPAddress4(GetAddressInteger(sender)), sender.sin_port);
-
 				if (buffer[0] == UDP_PREFIX_USER_CONNECTION) {
+					ConnectedClient* client = new ConnectedClient(INVALID_SOCKET,
+						IPAddress4(GetAddressInteger(sender)), sender.sin_port);
 
 					client_mutex.lock();
 					unsigned int id = get_random_value(0, 100000);
@@ -141,17 +197,54 @@ void UDPServer::data_threaded_loop() {
 					//call function
 					if (client_connect_handler != nullptr)
 						client_connect_handler(client, id);
+
+					char ack = UDP_PREFIX_CONN_ACK;
+					sendPacketClientNoLock(id, &ack, 1);
 					client_mutex.unlock();
 				}
 			}
 			else {
-				client_mutex.lock();
-				if (client_receive_handler)
-					client_receive_handler(client.second, client.first, buffer, result);
-				client_mutex.unlock();
+				char prefix = buffer[0];
+				if (prefix == UDP_PREFIX_USER_DISCONNECTION) {
+					char ack = UDP_PREFIX_DISCONN_ACK;
+					client_mutex.lock();
+					sendPacketClientNoLock(client.first, &ack, 1);
+
+					if (client_disconnect_handler != nullptr)
+						client_disconnect_handler(client.second, client.first);
+					client_mutex.unlock();
+					//add client's id to delete list
+					ids_to_remove.push_back(client.first);
+				}
+				else if (prefix == UDP_PREFIX_CONN_CHECK) {
+					client.second->updateConnCheckTime();
+				}
+				else if (prefix == UDP_PREFIX_PACKET) {
+					client_mutex.lock();
+					if (client_receive_handler)
+						client_receive_handler(client.second, client.first, buffer + 5, result - 5);
+					client_mutex.unlock();
+				}
 			}
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		for (const auto& to_remove : ids_to_remove) {
+			client_mutex.lock();
+			auto it = clients.find(to_remove);
+			//check iterator
+			if (it != clients.end()) {
+				auto& client_pair = *it;
+				//close socket
+				CloseSocket(client_pair.second->getSocket());
+				//free class object
+				delete client_pair.second;
+				//remove from map
+				clients.erase(it);
+			}
+			client_mutex.unlock();
+		}
+		ids_to_remove.clear();
+
+		sleep_cur_thread_ms(5);
 	}
 }

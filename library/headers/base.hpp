@@ -28,11 +28,14 @@ typedef int SOCKET;
 
 #define UDP_PREFIX_USER_CONNECTION 0x1
 #define UDP_PREFIX_USER_DISCONNECTION 0x2
-#define UDP_PREFIX_ACK 0x3
-#define UDP_PREFIX_SUCCESS 0x4
-#define UDP_PREFIX_FAIL 0x5
+#define UDP_PREFIX_CONN_ACK 0x3
+#define UDP_PREFIX_DISCONN_ACK 0x4
+#define UDP_PREFIX_PACKETS_ACK 0x5
 #define UDP_PREFIX_PACKET 0x6
-#define UDP_PREFIX_PACKET_RECEIVED 0x7
+#define UDP_PREFIX_CONN_CHECK 0x7
+
+#define DEFAULT_UDP_CONNECT_TIMEOUT 5000
+#define UDP_CONN_CHECK_TIMEOUT 2000
 
 enum InetProtocol {
 	INET_PROTOCOL_TCP,
@@ -47,6 +50,7 @@ enum ServerStatus {
 
 enum ClientStatus {
 	CLIENT_STATUS_DISCONNECTED,
+	CLIENT_STATUS_CONNECTING,
 	CLIENT_STATUS_CONNECTED
 };
 
@@ -87,3 +91,5 @@ struct UDP_ReliablePacket {
 int ConvertProtocol(InetProtocol protocol);
 unsigned int get_random_value();
 unsigned int get_random_value(unsigned int min, unsigned int max);
+unsigned int get_current_time_ms();
+void sleep_cur_thread_ms(unsigned int time);
