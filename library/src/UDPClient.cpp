@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <Socket.hpp>
+#include <string.h>
 
 using namespace vsntwl;
 

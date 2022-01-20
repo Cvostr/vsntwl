@@ -1,5 +1,6 @@
 #include <UDPServer.hpp>
 #include <Socket.hpp>
+#include <string.h>
 
 using namespace vsntwl;
 
